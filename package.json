@@ -1,6 +1,6 @@
 {
   "name": "mountd",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI Agent Skill/Workflow Distribution CLI",
   "license": "Apache-2.0",
   "repository": {

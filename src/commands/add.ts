@@ -13,7 +13,18 @@ import { detectAgents } from '../utils/detect-agent';
 
 import { resolveBundleContents, BundleResolution } from '../utils/registry';
 
-export async function handleInstall(source: string | undefined, options: { force?: boolean }) {
+export async function handleInstall(source: string | undefined, items: string[] | { force?: boolean }, options?: { force?: boolean }) {
+    // Handle both signatures: (source, items[], options) and (source, options)
+    let itemsToInstall: string[] = [];
+    let opts: { force?: boolean } = {};
+
+    if (Array.isArray(items)) {
+        itemsToInstall = items;
+        opts = options || {};
+    } else {
+        opts = items || {};
+    }
+
     const spinner = ora().start();
 
     // Handle reinstall from .mountdrc.json when no source provided
@@ -39,11 +50,11 @@ export async function handleInstall(source: string | undefined, options: { force
                 // This preserves the type information that CLI args might lose (if we don't have a flag)
                 if (item.type) {
                     const agents = await detectAgents();
-                    await installLocalSkill(item.source, options, item.source, agents, item.type);
+                    await installLocalSkill(item.source, opts, item.source, agents, item.type);
                 } else {
                     // Fallback for old config without type: try to detect or just run via CLI
                     // (Running via CLI might default to 'skill' type inside handleInstall if not specified)
-                    await program.parseAsync(['node', 'mountd', item.source, ...(options.force ? ['--force'] : [])], { from: 'user' });
+                    await program.parseAsync(['node', 'mountd', item.source, ...(opts.force ? ['--force'] : [])], { from: 'user' });
                 }
                 console.log(chalk.green(`✓ Reinstalled ${item.name}`));
             } catch (error: any) {
@@ -86,7 +97,7 @@ export async function handleInstall(source: string | undefined, options: { force
                 // If it's a blob, it might be a single file workflow or skill.
                 // For now, we don't know unless we infer from extension or user input.
                 // defaulting to skill (undefined type)
-                await installLocalSkill(tmpFile, options, originalSource, agents); // Pass original URL
+                await installLocalSkill(tmpFile, opts, originalSource, agents); // Pass original URL
                 await fs.remove(path.dirname(tmpFile));
             }
             else if (ghInfo) {
@@ -105,7 +116,7 @@ export async function handleInstall(source: string | undefined, options: { force
                         spinner.succeed(chalk.green(`Extracted ${skillNameDisplay}`));
 
                         const agents = await detectAgents();
-                        await installLocalSkill(sourceDir, options, originalSource, agents); // Pass original URL
+                        await installLocalSkill(sourceDir, opts, originalSource, agents); // Pass original URL
                         spinner.succeed(chalk.green(`Successfully installed ${skillNameDisplay}`));
                     } else {
                         // Repo Root - Check for registry.json
@@ -113,50 +124,64 @@ export async function handleInstall(source: string | undefined, options: { force
                         const items = await parseRegistryJson(repoRoot);
                         spinner.stop();
 
+                        let selectedItems: RegistryItem[];
 
-                        // Load config to pre-select installed skills
-                        const configManager = new ConfigManager();
-                        const config = await configManager.load();
-                        const installedSkillNames = new Set(config?.installed?.map(s => s.name) || []);
-
-                        // Multi-select with searchable checkbox
-                        // Handle potential ESM/CJS default export mismatch from bundler
-                        const checkboxPlusFn = (checkboxPlus as any).default || checkboxPlus;
-                        const selectedItems = await checkboxPlusFn({
-                            message: 'Select skills/workflows to install:',
-                            searchable: true,
-                            source: async (answersSoFar: Record<string, any>, input: string) => {
-                                const filtered = items.filter(item =>
-                                    item.name.toLowerCase().includes((input || '').toLowerCase()) ||
-                                    (item.description && item.description.toLowerCase().includes((input || '').toLowerCase()))
-                                );
-                                return filtered.map(item => {
-                                    const coloredName = item.type === 'bundle'
-                                        ? chalk.bold.yellow(item.name)
-                                        : item.type === 'workflow'
-                                            ? chalk.bold.magenta(item.name)
-                                            : chalk.bold.cyan(item.name);
-                                    return {
-                                        name: item.description
-                                            ? `${coloredName} ${chalk.dim(item.description)}`
-                                            : coloredName,
-                                        value: item,
-                                        checked: installedSkillNames.has(item.name)
-                                    };
-                                });
-                            },
-                            loop: false,
-                            theme: {
-                                icon: {
-                                    checked: chalk.green('◉'),
-                                    unchecked: chalk.dim('○'),
-                                    cursor: chalk.cyan('❯')
-                                }
+                        // If items specified via CLI, use those directly
+                        if (itemsToInstall.length > 0) {
+                            selectedItems = items.filter(item => itemsToInstall.includes(item.name));
+                            const notFound = itemsToInstall.filter(name => !items.find(item => item.name === name));
+                            if (notFound.length > 0) {
+                                console.warn(chalk.yellow(`Warning: The following items were not found in the registry: ${notFound.join(', ')}`));
                             }
-                        }); // Install each selected item
-                        if (selectedItems.length === 0) {
-                            spinner.info(chalk.yellow('No items selected. Exiting.'));
-                            return;
+                            if (selectedItems.length === 0) {
+                                spinner.fail(chalk.red('No matching items found in the registry.'));
+                                return;
+                            }
+                        } else {
+                            // Load config to pre-select installed skills
+                            const configManager = new ConfigManager();
+                            const config = await configManager.load();
+                            const installedSkillNames = new Set(config?.installed?.map(s => s.name) || []);
+
+                            // Multi-select with searchable checkbox
+                            // Handle potential ESM/CJS default export mismatch from bundler
+                            const checkboxPlusFn = (checkboxPlus as any).default || checkboxPlus;
+                            selectedItems = await checkboxPlusFn({
+                                message: 'Select skills/workflows to install:',
+                                searchable: true,
+                                source: async (answersSoFar: Record<string, any>, input: string) => {
+                                    const filtered = items.filter(item =>
+                                        item.name.toLowerCase().includes((input || '').toLowerCase()) ||
+                                        (item.description && item.description.toLowerCase().includes((input || '').toLowerCase()))
+                                    );
+                                    return filtered.map(item => {
+                                        const coloredName = item.type === 'bundle'
+                                            ? chalk.bold.yellow(item.name)
+                                            : item.type === 'workflow'
+                                                ? chalk.bold.magenta(item.name)
+                                                : chalk.bold.cyan(item.name);
+                                        return {
+                                            name: item.description
+                                                ? `${coloredName} ${chalk.dim(item.description)}`
+                                                : coloredName,
+                                            value: item,
+                                            checked: installedSkillNames.has(item.name)
+                                        };
+                                    });
+                                },
+                                loop: false,
+                                theme: {
+                                    icon: {
+                                        checked: chalk.green('◉'),
+                                        unchecked: chalk.dim('○'),
+                                        cursor: chalk.cyan('❯')
+                                    }
+                                }
+                            });
+                            if (selectedItems.length === 0) {
+                                spinner.info(chalk.yellow('No items selected. Exiting.'));
+                                return;
+                            }
                         }
 
                         // Coding agents selection
@@ -196,7 +221,7 @@ export async function handleInstall(source: string | undefined, options: { force
                             // Build source URL for this specific item
                             const itemSource = `${source}/tree/${ghInfo.ref || 'main'}/${item.path}`;
                             // Pass item.type (skill or workflow) to installLocalSkill
-                            await installLocalSkill(itemPath, options, itemSource, agents, item.type);
+                            await installLocalSkill(itemPath, opts, itemSource, agents, item.type);
                             spinner.succeed(chalk.green(`Installed ${item.name}`));
                         }
                     }
@@ -221,7 +246,7 @@ export async function handleInstall(source: string | undefined, options: { force
                     const sourceDir = rootDir ? path.join(tmpDir, rootDir) : tmpDir;
 
                     const agents = await detectAgents();
-                    await installLocalSkill(sourceDir, options, undefined, agents);
+                    await installLocalSkill(sourceDir, opts, undefined, agents);
                     await fs.remove(tmpDir);
                     spinner.succeed(chalk.green(`Successfully installed from zip`));
                 } else {
@@ -233,7 +258,7 @@ export async function handleInstall(source: string | undefined, options: { force
                     await downloadFile(source, tmpFile);
 
                     const agents = await detectAgents();
-                    await installLocalSkill(tmpFile, options, originalSource, agents);
+                    await installLocalSkill(tmpFile, opts, originalSource, agents);
                     await fs.remove(path.dirname(tmpFile));
                     spinner.succeed(chalk.green(`Successfully installed ${fileName}`));
                 }
@@ -244,7 +269,7 @@ export async function handleInstall(source: string | undefined, options: { force
         } else {
             // Local Path
             const agents = await detectAgents();
-            await installLocalSkill(source, options, originalSource, agents);
+            await installLocalSkill(source, opts, originalSource, agents);
             spinner.succeed(chalk.green(`Successfully installed skill from ${source}`));
         }
     } catch (error: any) {

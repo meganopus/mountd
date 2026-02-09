@@ -17,6 +17,7 @@ program
     .description('AI Agent Skill/Workflow Distribution CLI')
     .version(pkg.version)
     .argument('[source]', 'Source to install (user/repo, URL, or local path). Leave empty to reinstall from .mountdrc.json')
+    .argument('[items...]', 'Specific items to install from the registry (optional)')
     .option('-f, --force', 'Overwrite existing files')
     .action(handleInstall);
 

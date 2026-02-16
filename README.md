@@ -47,10 +47,18 @@ npx mountd remove my-skill
 
 Mountd currently supports auto-detection for:
 
+-   **Antigravity**: `.agent/skills/`
 -   **Gemini Code Assist**: `.gemini/skills/`
--   **Cursor**: `.cursor/rules/`
--   **GitHub Copilot**: `.github/copilot/`
--   **Generic**: `.agent/workflows/`
+-   **Cursor**: `.cursor/skills/`
+-   **GitHub Copilot**: `.github/skills/`
+-   **OpenCode**: `.opencode/skills/`
+-   **Claude Code**: `.claude/skills/`
+-   **Kilo Code**: `.kilocode/skills/`
+-   **Cline**: `.cline/skills/`
+-   **Roo Code**: `.roo/skills/`
+-   **Trae**: `.trae/skills/`
+-   **Windsurf**: `.windsurf/skills/`
+-   **Generic**: `.agent/skills/`
 
 ## Creating a Mountd-Compatible Repo
 

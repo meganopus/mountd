@@ -17,7 +17,7 @@ export class CursorAdapter implements AgentAdapter {
     }
 
     getSkillPath(cwd: string, skillName: string): string {
-        return path.join(cwd, '.cursor', 'rules', skillName);
+        return path.join(cwd, '.cursor', 'skills', skillName);
     }
 
     getWorkflowPath(cwd: string, workflowName: string): string {

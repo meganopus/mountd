@@ -33,11 +33,20 @@ export function registerRemoveCommand(program: Command) {
                         const adapter = getAdapterByName(agentName);
                         if (!adapter) continue;
 
-                        const targetDir = adapter.getSkillPath(process.cwd(), name);
-                        if (await fs.pathExists(targetDir)) {
-                            await fs.remove(targetDir);
+                        // Try removing as skill
+                        const skillDir = adapter.getSkillPath(process.cwd(), name);
+                        if (await fs.pathExists(skillDir)) {
+                            await fs.remove(skillDir);
                             removedAny = true;
-                            console.log(chalk.dim(`  - Deleted from ${adapter.displayName}: ${targetDir}`));
+                            console.log(chalk.dim(`  - Deleted skill from ${adapter.displayName}: ${skillDir}`));
+                        }
+
+                        // Try removing as workflow
+                        const workflowDir = adapter.getWorkflowPath(process.cwd(), name);
+                        if (await fs.pathExists(workflowDir)) {
+                            await fs.remove(workflowDir);
+                            removedAny = true;
+                            console.log(chalk.dim(`  - Deleted workflow from ${adapter.displayName}: ${workflowDir}`));
                         }
                     }
 

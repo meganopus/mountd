@@ -1,4 +1,4 @@
-export type AgentType = 'gemini' | 'cursor' | 'copilot' | 'generic';
+export type AgentType = 'gemini' | 'cursor' | 'copilot' | 'opencode' | 'claude' | 'kilocode' | 'cline' | 'roocode' | 'trae' | 'windsurf' | 'antigravity' | 'generic';
 
 export interface InstalledSkill {
     name: string;

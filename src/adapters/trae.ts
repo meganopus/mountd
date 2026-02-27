@@ -10,6 +10,7 @@ import path from 'node:path';
 export class TraeAdapter implements AgentAdapter {
     readonly name = 'trae';
     readonly displayName = 'Trae';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.trae'));
@@ -21,5 +22,13 @@ export class TraeAdapter implements AgentAdapter {
 
     getWorkflowPath(cwd: string, workflowName: string): string {
         return path.join(cwd, '.trae', 'workflows', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.trae', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.trae', 'workflows', workflowName);
     }
 }

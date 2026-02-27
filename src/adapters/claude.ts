@@ -10,6 +10,7 @@ import path from 'node:path';
 export class ClaudeCodeAdapter implements AgentAdapter {
     readonly name = 'claude';
     readonly displayName = 'Claude Code';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasClaudeDir = await fs.pathExists(path.join(cwd, '.claude'));
@@ -23,5 +24,13 @@ export class ClaudeCodeAdapter implements AgentAdapter {
 
     getWorkflowPath(cwd: string, workflowName: string): string {
         return path.join(cwd, '.claude', 'commands', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.claude', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.claude', 'commands', workflowName);
     }
 }

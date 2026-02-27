@@ -5,11 +5,12 @@ import path from 'node:path';
 /**
  * Adapter for Cline.
  * Detects `.cline/` directory or `.clinerules` file
- * and installs skills to `.cline/skills/` and workflows to `.cline/workflows/`
+ * and installs skills to `.cline/skills/` and workflows to `.cline/workflows/`.
  */
 export class ClineAdapter implements AgentAdapter {
     readonly name = 'cline';
     readonly displayName = 'Cline';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasClineDir = await fs.pathExists(path.join(cwd, '.cline'));
@@ -22,6 +23,14 @@ export class ClineAdapter implements AgentAdapter {
     }
 
     getWorkflowPath(cwd: string, workflowName: string): string {
-        return path.join(cwd, '.clinerules', 'workflows', workflowName);
+        return path.join(cwd, '.cline', 'workflows', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.cline', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.cline', 'workflows', workflowName);
     }
 }

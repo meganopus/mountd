@@ -10,6 +10,7 @@ import path from 'node:path';
 export class WindsurfAdapter implements AgentAdapter {
     readonly name = 'windsurf';
     readonly displayName = 'Windsurf';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasWindsurfRules = await fs.pathExists(path.join(cwd, '.windsurfrules'));
@@ -23,5 +24,13 @@ export class WindsurfAdapter implements AgentAdapter {
 
     getWorkflowPath(cwd: string, workflowName: string): string {
         return path.join(cwd, '.windsurf', 'workflows', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.codeium', 'windsurf', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.codeium', 'windsurf', 'workflows', workflowName);
     }
 }

@@ -1,4 +1,4 @@
-export { AgentAdapter } from './base';
+export type { AgentAdapter } from './base';
 export { AntigravityAdapter } from './antigravity';
 export { GeminiAdapter } from './gemini';
 export { CursorAdapter } from './cursor';

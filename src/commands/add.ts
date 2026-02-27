@@ -10,13 +10,24 @@ import os from 'node:os';
 import { program } from '../cli';
 import { ConfigManager } from '../utils/config';
 import { detectAgents } from '../utils/detect-agent';
+import { isLegacyWorkflowRecord } from '../utils/install-type';
 
 import { resolveBundleContents, BundleResolution } from '../utils/registry';
 
-export async function handleInstall(source: string | undefined, items: string[] | { force?: boolean }, options?: { force?: boolean }) {
+function parseAgentsOption(value: unknown): string[] {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.flatMap(v => String(v).split(',')).map(s => s.trim()).filter(Boolean);
+    return String(value).split(',').map(s => s.trim()).filter(Boolean);
+}
+
+export async function handleInstall(
+    source: string | undefined,
+    items: string[] | { force?: boolean; global?: boolean },
+    options?: { force?: boolean; global?: boolean }
+) {
     // Handle both signatures: (source, items[], options) and (source, options)
     let itemsToInstall: string[] = [];
-    let opts: { force?: boolean } = {};
+    let opts: { force?: boolean; global?: boolean } = {};
 
     if (Array.isArray(items)) {
         itemsToInstall = items;
@@ -25,13 +36,16 @@ export async function handleInstall(source: string | undefined, items: string[] 
         opts = items || {};
     }
 
+    const mountRoot = opts.global ? os.homedir() : process.cwd();
     const spinner = ora().start();
+    const rootOpts = program.opts() as any;
+    const agentNames = parseAgentsOption(rootOpts.agents);
+    const noPrompt = !!rootOpts.noPrompt;
 
     // Handle reinstall from .mountdrc.json when no source provided
     if (!source) {
         spinner.text = 'Reading .mountdrc.json...';
-        const { ConfigManager } = await import('../utils/config');
-        const configManager = new ConfigManager();
+        const configManager = new ConfigManager(mountRoot);
         const config = await configManager.load();
 
         if (!config || !config.installed || config.installed.length === 0) {
@@ -49,12 +63,16 @@ export async function handleInstall(source: string | undefined, items: string[] 
                 // If we have type info, use it to install directly without spawning CLI
                 // This preserves the type information that CLI args might lose (if we don't have a flag)
                 if (item.type) {
-                    const agents = await detectAgents();
-                    await installLocalSkill(item.source, opts, item.source, agents, item.type);
+                    const reinstallType = isLegacyWorkflowRecord(item) ? 'workflow' : item.type;
+                    const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
+                    await installLocalSkill(item.source, opts, item.source, agents, reinstallType, mountRoot);
                 } else {
                     // Fallback for old config without type: try to detect or just run via CLI
                     // (Running via CLI might default to 'skill' type inside handleInstall if not specified)
-                    await program.parseAsync(['node', 'mountd', item.source, ...(opts.force ? ['--force'] : [])], { from: 'user' });
+                    await program.parseAsync(
+                        ['node', 'mountd', item.source, ...(opts.force ? ['--force'] : []), ...(opts.global ? ['--global'] : [])],
+                        { from: 'user' }
+                    );
                 }
                 console.log(chalk.green(`✓ Reinstalled ${item.name}`));
             } catch (error: any) {
@@ -93,11 +111,11 @@ export async function handleInstall(source: string | undefined, items: string[] 
                 await downloadFile(rawUrl, tmpFile);
                 spinner.succeed(chalk.green(`Downloaded ${path.basename(tmpFile)}`));
 
-                const agents = await detectAgents();
+                const agents = await detectAgents(mountRoot, { global: !!opts.global });
                 // If it's a blob, it might be a single file workflow or skill.
                 // For now, we don't know unless we infer from extension or user input.
                 // defaulting to skill (undefined type)
-                await installLocalSkill(tmpFile, opts, originalSource, agents); // Pass original URL
+                await installLocalSkill(tmpFile, opts, originalSource, agents, undefined, mountRoot); // Pass original URL
                 await fs.remove(path.dirname(tmpFile));
             }
             else if (ghInfo) {
@@ -109,14 +127,14 @@ export async function handleInstall(source: string | undefined, items: string[] 
                     let sourceDir = repoRoot;
                     let skillNameDisplay = ghInfo.repo;
 
-                    if (ghInfo.path) {
+                        if (ghInfo.path) {
                         // Specific path provided (Tree)
                         sourceDir = path.join(repoRoot, ghInfo.path);
                         skillNameDisplay = path.basename(ghInfo.path);
                         spinner.succeed(chalk.green(`Extracted ${skillNameDisplay}`));
 
-                        const agents = await detectAgents();
-                        await installLocalSkill(sourceDir, opts, originalSource, agents); // Pass original URL
+                        const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
+                        await installLocalSkill(sourceDir, opts, originalSource, agents, undefined, mountRoot); // Pass original URL
                         spinner.succeed(chalk.green(`Successfully installed ${skillNameDisplay}`));
                     } else {
                         // Repo Root - Check for registry.json
@@ -139,7 +157,7 @@ export async function handleInstall(source: string | undefined, items: string[] 
                             }
                         } else {
                             // Load config to pre-select installed skills
-                            const configManager = new ConfigManager();
+                            const configManager = new ConfigManager(mountRoot);
                             const config = await configManager.load();
                             const installedSkillNames = new Set(config?.installed?.map(s => s.name) || []);
 
@@ -147,7 +165,7 @@ export async function handleInstall(source: string | undefined, items: string[] 
                             // Handle potential ESM/CJS default export mismatch from bundler
                             const checkboxPlusFn = (checkboxPlus as any).default || checkboxPlus;
                             selectedItems = await checkboxPlusFn({
-                                message: 'Select skills/workflows to install:',
+                                message: 'Select items to install (workflow is deprecated):',
                                 searchable: true,
                                 source: async (answersSoFar: Record<string, any>, input: string) => {
                                     const filtered = items.filter(item =>
@@ -160,10 +178,13 @@ export async function handleInstall(source: string | undefined, items: string[] 
                                             : item.type === 'workflow'
                                                 ? chalk.bold.magenta(item.name)
                                                 : chalk.bold.cyan(item.name);
+                                        const workflowTag = item.type === 'workflow'
+                                            ? ` ${chalk.dim('[deprecated -> installs as skill]')}`
+                                            : '';
                                         return {
                                             name: item.description
-                                                ? `${coloredName} ${chalk.dim(item.description)}`
-                                                : coloredName,
+                                                ? `${coloredName}${workflowTag} ${chalk.dim(item.description)}`
+                                                : `${coloredName}${workflowTag}`,
                                             value: item,
                                             checked: installedSkillNames.has(item.name)
                                         };
@@ -185,7 +206,7 @@ export async function handleInstall(source: string | undefined, items: string[] 
                         }
 
                         // Coding agents selection
-                        const agents = await detectAgents();
+                        const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
                         console.log(chalk.blue(`Using agents: ${chalk.bold(agents.map(a => a.displayName).join(', '))}`));
 
                         // Install each selected item
@@ -221,7 +242,7 @@ export async function handleInstall(source: string | undefined, items: string[] 
                             // Build source URL for this specific item
                             const itemSource = `${source}/tree/${ghInfo.ref || 'main'}/${item.path}`;
                             // Pass item.type (skill or workflow) to installLocalSkill
-                            await installLocalSkill(itemPath, opts, itemSource, agents, item.type);
+                            await installLocalSkill(itemPath, opts, itemSource, agents, item.type, mountRoot);
                             spinner.succeed(chalk.green(`Installed ${item.name}`));
                         }
                     }
@@ -245,8 +266,8 @@ export async function handleInstall(source: string | undefined, items: string[] 
                     const rootDir = files.find(f => fs.statSync(path.join(tmpDir, f)).isDirectory());
                     const sourceDir = rootDir ? path.join(tmpDir, rootDir) : tmpDir;
 
-                    const agents = await detectAgents();
-                    await installLocalSkill(sourceDir, opts, undefined, agents);
+                    const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
+                    await installLocalSkill(sourceDir, opts, undefined, agents, undefined, mountRoot);
                     await fs.remove(tmpDir);
                     spinner.succeed(chalk.green(`Successfully installed from zip`));
                 } else {
@@ -257,8 +278,8 @@ export async function handleInstall(source: string | undefined, items: string[] 
                     await fs.ensureDir(path.dirname(tmpFile));
                     await downloadFile(source, tmpFile);
 
-                    const agents = await detectAgents();
-                    await installLocalSkill(tmpFile, opts, originalSource, agents);
+                    const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
+                    await installLocalSkill(tmpFile, opts, originalSource, agents, undefined, mountRoot);
                     await fs.remove(path.dirname(tmpFile));
                     spinner.succeed(chalk.green(`Successfully installed ${fileName}`));
                 }
@@ -268,9 +289,70 @@ export async function handleInstall(source: string | undefined, items: string[] 
             spinner.fail(chalk.yellow('Registry shorthand not supported yet. Use full URL.'));
         } else {
             // Local Path
-            const agents = await detectAgents();
-            await installLocalSkill(source, opts, originalSource, agents);
-            spinner.succeed(chalk.green(`Successfully installed skill from ${source}`));
+            const sourcePath = source;
+
+            // If local path looks like a registry (contains registry.json), support installing bundles/items locally.
+            const registryPath = path.join(sourcePath, 'registry.json');
+            const looksLikeRegistry = await fs.pathExists(registryPath);
+
+            if (looksLikeRegistry) {
+                spinner.text = 'Reading local registry...';
+                const items = await parseRegistryJson(sourcePath);
+                spinner.stop();
+
+                if (itemsToInstall.length === 0) {
+                    spinner.fail(chalk.red('Local registry detected. Please specify one or more item names to install.'));
+                    return;
+                }
+
+                const selectedItems = items.filter(item => itemsToInstall.includes(item.name));
+                const notFound = itemsToInstall.filter(name => !items.find(item => item.name === name));
+                if (notFound.length > 0) {
+                    console.warn(chalk.yellow(`Warning: The following items were not found in the registry: ${notFound.join(', ')}`));
+                }
+                if (selectedItems.length === 0) {
+                    spinner.fail(chalk.red('No matching items found in the local registry.'));
+                    return;
+                }
+
+                const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
+                console.log(chalk.blue(`Using agents: ${chalk.bold(agents.map(a => a.displayName).join(', '))}`));
+
+                const finalItemsToInstall: RegistryItem[] = [];
+                const missingItems: string[] = [];
+
+                for (const item of selectedItems) {
+                    const resolution = resolveBundleContents(items, item);
+                    finalItemsToInstall.push(...resolution.valid);
+                    missingItems.push(...resolution.missing);
+                }
+
+                if (missingItems.length > 0) {
+                    console.warn(chalk.yellow(`\nWarning: The following items referenced in bundles were not found in the registry:`));
+                    missingItems.forEach(missing => console.warn(chalk.yellow(`  - ${missing}`)));
+                    console.warn(chalk.yellow(`Continuing with installation of available items...\n`));
+                }
+
+                const uniqueItems = Array.from(new Map(finalItemsToInstall.map(item => [item.name, item])).values());
+                for (const item of uniqueItems) {
+                    if (item.type === 'bundle') continue;
+                    spinner.start(`Installing ${item.name}...`);
+                    const itemPath = path.join(sourcePath, item.path);
+                    if (!await fs.pathExists(itemPath)) {
+                        spinner.warn(chalk.yellow(`Path not found: ${item.path}. Skipping.`));
+                        continue;
+                    }
+                    const itemSource = `local://${path.resolve(sourcePath)}/${item.path}`;
+                    await installLocalSkill(itemPath, opts, itemSource, agents, item.type, mountRoot);
+                    spinner.succeed(chalk.green(`Installed ${item.name}`));
+                }
+
+                spinner.succeed(chalk.green(`Successfully installed from local registry ${sourcePath}`));
+            } else {
+                const agents = await detectAgents(mountRoot, { global: !!opts.global, agents: agentNames, noPrompt });
+                await installLocalSkill(sourcePath, opts, originalSource, agents, undefined, mountRoot);
+                spinner.succeed(chalk.green(`Successfully installed skill from ${sourcePath}`));
+            }
         }
     } catch (error: any) {
         if (spinner.isSpinning) {

@@ -19,6 +19,9 @@ program
     .argument('[source]', 'Source to install (user/repo, URL, or local path). Leave empty to reinstall from .mountdrc.json')
     .argument('[items...]', 'Specific items to install from the registry (optional)')
     .option('-f, --force', 'Overwrite existing files')
+    .option('-g, --global', 'Use global config/install paths (home directory)')
+    .option('--agents <agents>', 'Comma-separated agent adapter names (e.g. "claude,cursor")')
+    .option('--no-prompt', 'Do not prompt for agent selection (use --agents or existing config)')
     .action(handleInstall);
 
 registerListCommand(program);

@@ -4,6 +4,7 @@ export interface InstalledSkill {
     name: string;
     source: string;
     version?: string;
+    legacyType?: 'workflow';
     type?: 'skill' | 'workflow';
     installedAt: string;
 }

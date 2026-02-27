@@ -9,6 +9,7 @@ import path from 'node:path';
 export class KiloCodeAdapter implements AgentAdapter {
     readonly name = 'kilocode';
     readonly displayName = 'Kilo Code';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.kilocode'));
@@ -20,5 +21,13 @@ export class KiloCodeAdapter implements AgentAdapter {
 
     getWorkflowPath(cwd: string, workflowName: string): string {
         return path.join(cwd, '.kilocode', 'workflows', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.kilocode', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.kilocode', 'workflows', workflowName);
     }
 }

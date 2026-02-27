@@ -4,11 +4,12 @@ import path from 'node:path';
 
 /**
  * Adapter for Cursor.
- * Detects `.cursor/` directory or `.cursorrules` file and installs to `.cursor/rules/`
+ * Detects `.cursor/` directory or `.cursorrules` file and installs skills to `.agents/skills/` (project).
  */
 export class CursorAdapter implements AgentAdapter {
     readonly name = 'cursor';
     readonly displayName = 'Cursor';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasCursorDir = await fs.pathExists(path.join(cwd, '.cursor'));
@@ -17,10 +18,18 @@ export class CursorAdapter implements AgentAdapter {
     }
 
     getSkillPath(cwd: string, skillName: string): string {
-        return path.join(cwd, '.cursor', 'skills', skillName);
+        return path.join(cwd, '.agents', 'skills', skillName);
     }
 
     getWorkflowPath(cwd: string, workflowName: string): string {
-        return path.join(cwd, '.cursor', 'workflows', workflowName);
+        return path.join(cwd, '.agents', 'workflows', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.cursor', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.cursor', 'workflows', workflowName);
     }
 }

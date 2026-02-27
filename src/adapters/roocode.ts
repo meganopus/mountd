@@ -9,6 +9,7 @@ import path from 'node:path';
 export class RooCodeAdapter implements AgentAdapter {
     readonly name = 'roocode';
     readonly displayName = 'Roo Code';
+    readonly supportsGlobalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.roo'));
@@ -20,5 +21,13 @@ export class RooCodeAdapter implements AgentAdapter {
 
     getWorkflowPath(cwd: string, workflowName: string): string {
         return path.join(cwd, '.roo', 'workflows', workflowName);
+    }
+
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.roo', 'skills', skillName);
+    }
+
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.roo', 'workflows', workflowName);
     }
 }

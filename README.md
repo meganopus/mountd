@@ -12,6 +12,7 @@ Mountd is a CLI tool that enables developers to easily discover, install, and ma
 -   **Auto-Reinstall**: Run `npx mountd` without arguments to reinstall all tracked skills from `.mountdrc.json`.
 -   **Smart Detection**: Automatically detects your AI agent configuration (Gemini, Cursor, etc.) and installs skills to the correct location.
 -   **Source Tracking**: All installations are tracked in `.mountdrc.json` with their original source URLs.
+-   **Legacy Workflow Compatibility**: Existing `type: "workflow"` items are still accepted and auto-converted to skill installs.
 
 ## Usage
 
@@ -26,6 +27,38 @@ npx mountd user/repo
 # Reinstall all from .mountdrc.json
 npx mountd
 ```
+
+### Non-interactive installs
+
+By default, `mountd` will prompt to select which agent(s) you use. For CI/E2E automation, you can disable prompts:
+
+```bash
+npx mountd user/repo --agents claude,cursor --no-prompt
+```
+
+You can also install from a local registry directory (a folder containing `registry.json`) without prompts by specifying item names:
+
+```bash
+npx mountd ./path/to/registry bundle-name --agents claude --no-prompt
+```
+
+### Global Mode
+
+Use `--global` to store config in your home directory and install into home-based agent folders (e.g. `~/.claude/...`) instead of the current project.
+
+```bash
+# Install globally (uses ~/.mountdrc.json)
+npx mountd --global user/repo
+
+# List globally installed items
+npx mountd --global list
+```
+
+### Workflow Deprecation (Legacy Support)
+
+`workflow` is deprecated as a first-class install type. Mountd still accepts old `type: "workflow"` entries and installs them using canonical skill semantics.
+
+For new registries, use `type: "skill"` only.
 
 ### List Installed Skills
 
@@ -48,17 +81,17 @@ npx mountd remove my-skill
 Mountd currently supports auto-detection for:
 
 -   **Antigravity**: `.agent/skills/`
--   **Gemini Code Assist**: `.gemini/skills/`
--   **Cursor**: `.cursor/skills/`
--   **GitHub Copilot**: `.github/skills/`
--   **OpenCode**: `.opencode/skills/`
+-   **Gemini Code Assist**: `.agents/skills/` (project) and `~/.gemini/skills/` (global)
+-   **Cursor**: `.agents/skills/` (project) and `~/.cursor/skills/` (global)
+-   **GitHub Copilot**: `.agents/skills/` (project) and `~/.copilot/skills/` (global)
+-   **OpenCode**: `.agents/skills/` (project) and `~/.config/opencode/skills/` (global)
 -   **Claude Code**: `.claude/skills/`
 -   **Kilo Code**: `.kilocode/skills/`
 -   **Cline**: `.cline/skills/`
 -   **Roo Code**: `.roo/skills/`
 -   **Trae**: `.trae/skills/`
--   **Windsurf**: `.windsurf/skills/`
--   **Generic**: `.agent/skills/`
+-   **Windsurf**: `.windsurf/skills/` (project) and `~/.codeium/windsurf/skills/` (global)
+-   **Generic**: `.agents/skills/` (project) and `~/.config/agents/skills/` (global)
 
 ## Creating a Mountd-Compatible Repo
 
@@ -95,8 +128,8 @@ To enable the `npx mountd user/repo` shorthand and interactive selection, you mu
     },
     {
       "name": "deploy-workflow",
-      "path": "workflows/deploy.md",
-      "type": "workflow",
+      "path": "skills/deploy-workflow",
+      "type": "skill",
       "description": "Deployment instructions"
     },
     {
@@ -114,9 +147,9 @@ To enable the `npx mountd user/repo` shorthand and interactive selection, you mu
 | Type       | Description                                                              |
 | ---------- | ------------------------------------------------------------------------ |
 | `skill`    | A folder containing `SKILL.md` and supporting files                      |
-| `workflow` | A single markdown file with workflow instructions                        |
+| `workflow` | Deprecated legacy type; auto-converted to `skill` install semantics      |
 | `bundle`   | A collection of skills/workflows that are installed together as a group  |
 
 > **Note:** Bundles don't have a `path` property—they reference other items by name via the `includes` array. If any referenced item doesn't exist in the registry, a warning is shown but installation continues with available items.
 
-When users run `npx mountd <your-repo-url>`, they will be able to interactively select `git-workflow`, `react-refactor`, or `deploy.md`.
+When users run `npx mountd <your-repo-url>`, they will be able to interactively select `git-workflow`, `react-refactor`, or `deploy-workflow`.

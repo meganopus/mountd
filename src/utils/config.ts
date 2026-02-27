@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'fs-extra';
-import { type FlowerConfig } from '../types';
+import { type FlowerConfig, type InstalledSkill } from '../types';
 
 export class ConfigManager {
     private configPath: string;
@@ -38,7 +38,7 @@ export class ConfigManager {
         await this.save(newConfig);
     }
 
-    async addInstalledSkill(skill: { name: string; source: string; version?: string; type?: 'skill' | 'workflow'; installedAt: string; }): Promise<void> {
+    async addInstalledSkill(skill: InstalledSkill): Promise<void> {
         const current = await this.load() || {};
         const installed = current.installed || [];
         // Remove existing if any (update)

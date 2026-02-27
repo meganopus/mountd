@@ -22,6 +22,7 @@ import path from 'node:path';
 export class YourAgentAdapter implements AgentAdapter {
     readonly name = 'your-agent';  // Unique identifier (lowercase, no spaces)
     readonly displayName = 'Your Agent Name';  // Human-readable name
+    readonly supportsGlobalInstall = true;
 
     /**
      * Detect if this agent is being used.
@@ -41,9 +42,25 @@ export class YourAgentAdapter implements AgentAdapter {
 
     /**
      * Get the path where workflows should be installed.
+     * Deprecated: kept only for legacy cleanup compatibility.
      */
     getWorkflowPath(cwd: string, workflowName: string): string {
         return path.join(cwd, '.youragent', 'workflows', workflowName);
+    }
+
+    /**
+     * Get the global path where skills should be installed.
+     */
+    getGlobalSkillPath(homeDir: string, skillName: string): string {
+        return path.join(homeDir, '.youragent', 'skills', skillName);
+    }
+
+    /**
+     * Get the global path where workflows should be installed.
+     * Deprecated: kept only for legacy cleanup compatibility.
+     */
+    getGlobalWorkflowPath(homeDir: string, workflowName: string): string {
+        return path.join(homeDir, '.youragent', 'workflows', workflowName);
     }
 }
 ```
@@ -126,7 +143,7 @@ async detect(cwd: string): Promise<boolean> {
 ### Skills vs Workflows
 
 - **Skills**: Typically directories with multiple files (SKILL.md, scripts/, etc.)
-- **Workflows**: Often single markdown files
+- **Workflows**: Legacy/deprecated in Mountd and auto-converted to skill semantics during install
 
 ### Recommended Structure
 

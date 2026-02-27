@@ -10,6 +10,7 @@ export class RooCodeAdapter implements AgentAdapter {
     readonly name = 'roocode';
     readonly displayName = 'Roo Code';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.roo'));

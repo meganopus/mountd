@@ -10,6 +10,7 @@ export class KiloCodeAdapter implements AgentAdapter {
     readonly name = 'kilocode';
     readonly displayName = 'Kilo Code';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.kilocode'));

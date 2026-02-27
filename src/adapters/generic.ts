@@ -11,6 +11,7 @@ export class GenericAdapter implements AgentAdapter {
     readonly name = 'generic';
     readonly displayName = 'Generic / Other';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         // Check if .agents directory exists, or always return true as fallback

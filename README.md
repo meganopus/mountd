@@ -85,6 +85,7 @@ Mountd currently supports auto-detection for:
 -   **Cursor**: `.agents/skills/` (project) and `~/.cursor/skills/` (global)
 -   **GitHub Copilot**: `.agents/skills/` (project) and `~/.copilot/skills/` (global)
 -   **OpenCode**: `.agents/skills/` (project) and `~/.config/opencode/skills/` (global)
+-   **OpenAI Codex**: `.agents/skills/` (project) and `~/.agents/skills` (global)
 -   **Claude Code**: `.claude/skills/`
 -   **Kilo Code**: `.kilocode/skills/`
 -   **Cline**: `.cline/skills/`

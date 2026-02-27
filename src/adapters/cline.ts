@@ -11,6 +11,7 @@ export class ClineAdapter implements AgentAdapter {
     readonly name = 'cline';
     readonly displayName = 'Cline';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasClineDir = await fs.pathExists(path.join(cwd, '.cline'));

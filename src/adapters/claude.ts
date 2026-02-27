@@ -11,6 +11,7 @@ export class ClaudeCodeAdapter implements AgentAdapter {
     readonly name = 'claude';
     readonly displayName = 'Claude Code';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasClaudeDir = await fs.pathExists(path.join(cwd, '.claude'));

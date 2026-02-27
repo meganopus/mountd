@@ -68,6 +68,11 @@ export async function installLocalSkill(
             continue;
         }
 
+        if (!installGlobal && !adapter.supportsLocalInstall) {
+            console.warn(chalk.yellow(`${adapter.displayName} does not support local installs. Skipping.`));
+            continue;
+        }
+
         const targetDir = installGlobal
             ? adapter.getGlobalSkillPath(cwd, skillName)
             : adapter.getSkillPath(cwd, skillName);

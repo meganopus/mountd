@@ -4,6 +4,7 @@ export { GeminiAdapter } from './gemini';
 export { CursorAdapter } from './cursor';
 export { CopilotAdapter } from './copilot';
 export { OpenCodeAdapter } from './opencode';
+export { CodexAdapter } from './codex';
 export { ClaudeCodeAdapter } from './claude';
 export { KiloCodeAdapter } from './kilocode';
 export { ClineAdapter } from './cline';
@@ -17,6 +18,7 @@ import { GeminiAdapter } from './gemini';
 import { CursorAdapter } from './cursor';
 import { CopilotAdapter } from './copilot';
 import { OpenCodeAdapter } from './opencode';
+import { CodexAdapter } from './codex';
 import { ClaudeCodeAdapter } from './claude';
 import { KiloCodeAdapter } from './kilocode';
 import { ClineAdapter } from './cline';
@@ -38,6 +40,7 @@ export const AGENT_ADAPTERS: AgentAdapter[] = [
     new CursorAdapter(),
     new CopilotAdapter(),
     new OpenCodeAdapter(),
+    new CodexAdapter(),
     new ClaudeCodeAdapter(),
     new KiloCodeAdapter(),
     new ClineAdapter(),

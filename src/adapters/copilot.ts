@@ -10,6 +10,7 @@ export class CopilotAdapter implements AgentAdapter {
     readonly name = 'copilot';
     readonly displayName = 'GitHub Copilot';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasInstructions = await fs.pathExists(path.join(cwd, '.github', 'copilot-instructions.md'));

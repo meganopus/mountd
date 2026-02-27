@@ -11,6 +11,7 @@ export class WindsurfAdapter implements AgentAdapter {
     readonly name = 'windsurf';
     readonly displayName = 'Windsurf';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasWindsurfRules = await fs.pathExists(path.join(cwd, '.windsurfrules'));

@@ -16,6 +16,12 @@ export interface AgentAdapter {
     readonly supportsGlobalInstall: boolean;
 
     /**
+     * Whether this adapter supports local installs.
+     * If false, the adapter will be disabled/skipped in local mode.
+     */
+    readonly supportsLocalInstall: boolean;
+
+    /**
      * Detect if this agent is being used in the given directory.
      * @param cwd - Current working directory
      * @returns true if this agent is detected

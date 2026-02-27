@@ -11,6 +11,7 @@ export class AntigravityAdapter implements AgentAdapter {
     readonly name = 'antigravity';
     readonly displayName = 'Antigravity';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.gemini', 'antigravity'));

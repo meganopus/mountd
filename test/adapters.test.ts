@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { CursorAdapter } from '../src/adapters/cursor';
-import { GenericAdapter, getAdapterByName } from '../src/adapters';
+import { CodexAdapter, GenericAdapter, getAdapterByName } from '../src/adapters';
 import { makeTempDir, removeTempDir } from './helpers';
 
 describe('adapters', () => {
@@ -32,6 +32,17 @@ describe('adapters', () => {
     const dir = await makeTempDir();
     try {
       const adapter = new GenericAdapter();
+      expect(await adapter.detect(dir)).toBe(true);
+    } finally {
+      await removeTempDir(dir);
+    }
+  });
+
+  it('CodexAdapter.detect detects .agents/skills in repo tree', async () => {
+    const dir = await makeTempDir();
+    try {
+      await fs.mkdir(path.join(dir, '.agents', 'skills'), { recursive: true });
+      const adapter = new CodexAdapter();
       expect(await adapter.detect(dir)).toBe(true);
     } finally {
       await removeTempDir(dir);

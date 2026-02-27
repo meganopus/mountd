@@ -10,6 +10,7 @@ export class GeminiAdapter implements AgentAdapter {
     readonly name = 'gemini';
     readonly displayName = 'Gemini Code Assist';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.gemini'));

@@ -16,6 +16,7 @@ function makeFakeAdapter(paths: {
     name: 'fake',
     displayName: 'Fake Adapter',
     supportsGlobalInstall: paths.supportsGlobalInstall ?? true,
+    supportsLocalInstall: true,
     detect: async () => true,
     getSkillPath: () => paths.skillPath,
     getWorkflowPath: () => paths.workflowPath ?? paths.skillPath,

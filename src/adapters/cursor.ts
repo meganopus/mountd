@@ -10,6 +10,7 @@ export class CursorAdapter implements AgentAdapter {
     readonly name = 'cursor';
     readonly displayName = 'Cursor';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasCursorDir = await fs.pathExists(path.join(cwd, '.cursor'));

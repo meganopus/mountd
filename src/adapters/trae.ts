@@ -11,6 +11,7 @@ export class TraeAdapter implements AgentAdapter {
     readonly name = 'trae';
     readonly displayName = 'Trae';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         return await fs.pathExists(path.join(cwd, '.trae'));

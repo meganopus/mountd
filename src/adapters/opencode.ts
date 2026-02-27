@@ -10,6 +10,7 @@ export class OpenCodeAdapter implements AgentAdapter {
     readonly name = 'opencode';
     readonly displayName = 'OpenCode';
     readonly supportsGlobalInstall = true;
+    readonly supportsLocalInstall = true;
 
     async detect(cwd: string): Promise<boolean> {
         const hasOpenCodeDir = await fs.pathExists(path.join(cwd, '.opencode'));

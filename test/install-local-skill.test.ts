@@ -39,13 +39,13 @@ describe('installLocalSkill', () => {
 
       const out = await fs.readFile(targetFile, 'utf8');
       expect(out.startsWith('---\n')).toBe(true);
-      expect(out).toContain('description: Installed by mountd: my-skillmd');
+      expect(out).toContain('description: "Installed by mountd: my-skill"');
       expect(out).toContain('# Hello');
 
       const configRaw = await fs.readFile(path.join(dir, '.mountdrc.json'), 'utf8');
       const config = JSON.parse(configRaw);
       expect(config.installed).toHaveLength(1);
-      expect(config.installed[0].name).toBe('my-skill.md');
+      expect(config.installed[0].name).toBe('my-skill');
       expect(config.installed[0].type).toBe('skill');
       expect(config.installed[0].legacyType).toBe('workflow');
       expect(config.installed[0].source).toBe('local://my-skill.md');

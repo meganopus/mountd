@@ -1,0 +1,28 @@
+{
+  "agents": [
+    "codex",
+    "generic"
+  ],
+  "installed": [
+    {
+      "name": "project-kickoff-heavy.md",
+      "source": "https://github.com/meganopus/pdlc/tree/main/workflows/project-kickoff-heavy.md",
+      "type": "skill",
+      "legacyType": "workflow",
+      "installedAt": "2026-03-06T01:02:23.531Z"
+    },
+    {
+      "name": "wireframe-generator",
+      "source": "https://github.com/meganopus/pdlc/tree/main/skills/wireframe-generator",
+      "type": "skill",
+      "installedAt": "2026-03-06T01:13:23.636Z"
+    },
+    {
+      "name": "project-kickoff-heavy",
+      "source": "https://github.com/meganopus/pdlc/tree/main/workflows/project-kickoff-heavy.md",
+      "type": "skill",
+      "legacyType": "workflow",
+      "installedAt": "2026-03-06T01:13:48.001Z"
+    }
+  ]
+}

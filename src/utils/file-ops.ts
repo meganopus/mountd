@@ -1,9 +1,10 @@
+import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'node:path';
-import chalk from 'chalk';
-import { detectAgents } from './detect-agent';
-import { ConfigManager } from './config';
+import yaml from 'yaml';
 import { AgentAdapter } from '../adapters';
+import { ConfigManager } from './config';
+import { detectAgents } from './detect-agent';
 import { normalizeInstallType } from './install-type';
 
 let hasWarnedWorkflowDeprecation = false;
@@ -17,21 +18,64 @@ async function readSkillMarkdownFromDir(dirPath: string): Promise<string | null>
     return null;
 }
 
-function toCursorRuleMdc(name: string, markdown: string): string {
+function extractFrontmatter(markdown: string): { frontmatter: string | null; body: string; parsed: any } {
     const trimmed = markdown.trim();
-    if (trimmed.startsWith('---')) return markdown;
-    const safeName = name.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || name;
+    if (!trimmed.startsWith('---')) {
+        return { frontmatter: null, body: markdown, parsed: {} };
+    }
+
+    const parts = trimmed.split('---');
+    if (parts.length >= 3) {
+        const frontmatter = parts[1] || ''; // Prevent undefined TS errors
+        const body = parts.slice(2).join('---').trim();
+        try {
+            const parsed = yaml.parse(frontmatter) || {};
+            return { frontmatter, body, parsed };
+        } catch {
+            return { frontmatter, body, parsed: {} };
+        }
+    }
+
+    return { frontmatter: null, body: markdown, parsed: {} };
+}
+
+function toSkillMd(name: string, markdown: string): string {
+    const { parsed, body } = extractFrontmatter(markdown);
+
+    if (!parsed.name) {
+        parsed.name = name.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // De-slugify
+    }
+
     return [
         '---',
-        `description: Installed by mountd: ${safeName}`,
-        'globs:',
-        '  - "**/*"',
-        'alwaysApply: false',
+        yaml.stringify(parsed).trim(),
         '---',
         '',
-        markdown.trimEnd(),
-        ''
-    ].join('\n');
+        body
+    ].join('\n') + '\n';
+}
+
+function toCursorRuleMdc(name: string, markdown: string): string {
+    const { parsed, body } = extractFrontmatter(markdown);
+
+    if (!parsed.description) {
+        const safeName = name.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || name;
+        parsed.description = `Installed by mountd: ${safeName}`;
+    }
+    if (!parsed.globs) {
+        parsed.globs = ['**/*'];
+    }
+    if (parsed.alwaysApply === undefined) {
+        parsed.alwaysApply = false;
+    }
+
+    return [
+        '---',
+        yaml.stringify(parsed).trim(),
+        '---',
+        '',
+        body
+    ].join('\n') + '\n';
 }
 
 export async function installLocalSkill(
@@ -60,7 +104,10 @@ export async function installLocalSkill(
     // 2. Detect Agents and Get Target Directories
     const installGlobal = !!options.global;
     const adapters = agentAdapters && agentAdapters.length > 0 ? agentAdapters : await detectAgents(cwd, { global: installGlobal });
-    const skillName = path.basename(sourcePath);
+    let skillName = path.basename(sourcePath);
+    if (skillName.toLowerCase().endsWith('.md')) {
+        skillName = skillName.slice(0, -3);
+    }
 
     for (const adapter of adapters) {
         if (installGlobal && !adapter.supportsGlobalInstall) {
@@ -88,7 +135,7 @@ export async function installLocalSkill(
         // 4. Copy Files
         try {
             const stats = await fs.stat(sourcePath);
-            const targetLooksLikeFile = path.extname(targetDir).length > 0;
+            const targetLooksLikeFile = path.extname(targetDir).toLowerCase() === '.mdc';
             await fs.ensureDir(path.dirname(targetDir)); // Ensure parent dir exists
 
             // If it's a file (often true for workflows), copy ensuring directory exists
@@ -107,7 +154,8 @@ export async function installLocalSkill(
                 } else {
                     // Skill behavior (existing): create folder and place content inside.
                     await fs.ensureDir(targetDir);
-                    await fs.copy(sourcePath, path.join(targetDir, path.basename(sourcePath)), { overwrite: options.force });
+                    const md = await fs.readFile(sourcePath, 'utf8');
+                    await fs.writeFile(path.join(targetDir, 'SKILL.md'), toSkillMd(skillName, md), 'utf8');
                 }
 
             } else {
@@ -121,7 +169,7 @@ export async function installLocalSkill(
                     if (path.extname(targetDir).toLowerCase() === '.mdc') {
                         await fs.writeFile(targetDir, toCursorRuleMdc(skillName, md), 'utf8');
                     } else {
-                        await fs.writeFile(targetDir, md, 'utf8');
+                        await fs.writeFile(targetDir, toSkillMd(skillName, md), 'utf8');
                     }
                 } else {
                     await fs.ensureDir(targetDir);
